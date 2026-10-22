@@ -10,6 +10,7 @@ import {
   FolderOpen,
   LoaderCircle,
   History,
+  Settings,
   Sparkles,
   Unplug,
   X,
@@ -19,7 +20,6 @@ import { bioName, modKey } from '../lib/platform'
 import { parseSourceId, sourceId, sourceLabel, type VaultSource } from '../lib/kdbx'
 import {
   biometricAvailable,
-  biometricForget,
   biometricStore,
   biometricUnlock,
   isBiometricEnabled,
@@ -94,6 +94,15 @@ onMounted(async () => {
 watch(selected, () => {
   enableBio.value = false
 })
+
+// turning a stored password off happens in Settings, so re-read the markers
+// when that modal closes
+watch(
+  () => store.settingsOpen,
+  (open) => {
+    if (!open) bioRevision.value++
+  },
+)
 
 watch(mode, (m) => {
   if (m === 'dropbox' && dbxConnected.value && !dbxFiles.value.length) void loadDropboxFiles()
@@ -265,12 +274,6 @@ async function unlockWithBiometrics() {
   }
 }
 
-async function disableBiometrics() {
-  if (!selectedId.value) return
-  await biometricForget(selectedId.value)
-  bioRevision.value++
-}
-
 async function submit() {
   if (!canSubmit.value || !selected.value) return
   busy.value = true
@@ -335,6 +338,14 @@ defineExpose({ pickDatabase, openDefault })
     <div class="card" :class="{ shake: !!error }" :key="error">
       <button v-if="props.modal" class="icon-btn close" @click="emit('close')">
         <X :size="16" />
+      </button>
+      <button
+        v-else
+        class="icon-btn gear"
+        title="Settings"
+        @click="store.settingsOpen = true"
+      >
+        <Settings :size="15" />
       </button>
 
       <div class="mark">
@@ -504,7 +515,6 @@ defineExpose({ pickDatabase, openDefault })
           </button>
           <div v-show="!bioBusy" class="bio-row">
             <span class="bio-or">or use your master password</span>
-            <button class="bio-disable" @click="disableBiometrics">Disable {{ bioName }}</button>
           </div>
         </template>
 
@@ -615,10 +625,14 @@ defineExpose({ pickDatabase, openDefault })
   align-items: center;
 }
 
-.close {
+.close,
+.gear {
   position: absolute;
   top: 12px;
   right: 12px;
+}
+.gear {
+  color: var(--faint);
 }
 
 .mark {
@@ -844,24 +858,13 @@ h1 {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   margin-top: 8px;
   flex-shrink: 0;
 }
 .bio-or {
   color: var(--faint);
   font-size: 11.5px;
-}
-.bio-disable {
-  background: none;
-  border: none;
-  color: var(--faint);
-  font-size: 11.5px;
-  cursor: pointer;
-  padding: 0;
-}
-.bio-disable:hover {
-  color: var(--danger);
 }
 
 .bio-optin {

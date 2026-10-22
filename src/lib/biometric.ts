@@ -20,6 +20,11 @@ export function isBiometricEnabled(path: string): boolean {
   return markedPaths().includes(path)
 }
 
+/** Every vault with a stored password, for the Settings list. */
+export function biometricPaths(): string[] {
+  return markedPaths()
+}
+
 function setMarker(path: string, on: boolean) {
   const list = markedPaths().filter((p) => p !== path)
   if (on) list.push(path)

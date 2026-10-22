@@ -28,6 +28,7 @@ import type {
 const STANDARD_FIELDS = new Set(['Title', 'UserName', 'Password', 'URL', 'Notes'])
 const CLIPBOARD_CLEAR_MS = 45_000
 const RECENT_FILES_KEY = 'keepsake:recentFiles'
+const LOCK_ON_APP_SWITCH_KEY = 'keepsake:lockOnAppSwitch'
 const MAX_RECENT = 5
 
 export interface VaultSession {
@@ -117,6 +118,11 @@ export const useVaultStore = defineStore('vault', () => {
 
   const searchOpen = ref(false)
   const helpOpen = ref(false)
+  const settingsOpen = ref(false)
+
+  // Leaving the app locks every vault unless the user opts out in Settings;
+  // the secure default applies to anyone who never touches the preference.
+  const lockOnAppSwitch = ref(localStorage.getItem(LOCK_ON_APP_SWITCH_KEY) !== 'off')
 
   const toast = ref<{ id: number; message: string } | null>(null)
   let toastCounter = 0
@@ -321,6 +327,11 @@ export const useVaultStore = defineStore('vault', () => {
     } catch {
       return []
     }
+  }
+
+  function setLockOnAppSwitch(on: boolean) {
+    lockOnAppSwitch.value = on
+    localStorage.setItem(LOCK_ON_APP_SWITCH_KEY, on ? 'on' : 'off')
   }
 
   function rememberRecent(path: string) {
@@ -821,6 +832,8 @@ export const useVaultStore = defineStore('vault', () => {
     editingIsNew,
     searchOpen,
     helpOpen,
+    settingsOpen,
+    lockOnAppSwitch,
     expandedGroups,
     toast,
     // derived
@@ -868,5 +881,6 @@ export const useVaultStore = defineStore('vault', () => {
     copyUsername,
     showToast,
     recentFiles,
+    setLockOnAppSwitch,
   }
 })

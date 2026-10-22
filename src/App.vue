@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ask } from '@tauri-apps/plugin-dialog'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { Lock, Plus, Save, Search, X } from 'lucide-vue-next'
+import { Lock, Plus, Save, Search, Settings, X } from 'lucide-vue-next'
 import UnlockScreen from './components/UnlockScreen.vue'
 import Sidebar from './components/Sidebar.vue'
 import EntryList from './components/EntryList.vue'
@@ -10,6 +10,7 @@ import EntryDetail from './components/EntryDetail.vue'
 import SearchPalette from './components/SearchPalette.vue'
 import HelpOverlay from './components/HelpOverlay.vue'
 import PromptModal from './components/PromptModal.vue'
+import SettingsModal from './components/SettingsModal.vue'
 import Toast from './components/Toast.vue'
 import { useVaultStore } from './stores/vault'
 import { isAndroid, isMac, modKey } from './lib/platform'
@@ -160,6 +161,14 @@ function onKeydown(e: KeyboardEvent) {
   const typing = isTyping(e)
 
   // ---- works everywhere ----
+  if (store.settingsOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      store.settingsOpen = false
+    }
+    return
+  }
+
   if (mod && e.key.toLowerCase() === 'o') {
     e.preventDefault()
     if (store.locked) unlockScreen.value?.pickDatabase()
@@ -309,10 +318,16 @@ function onContextMenu(e: MouseEvent) {
   e.preventDefault()
 }
 
-// On Android, leaving the app locks every vault: whoever picks up the
-// phone next gets the unlock screen, not the password list.
+// On Android, leaving the app locks every vault by default: whoever picks up
+// the phone next gets the unlock screen, not the password list. Users who
+// trust their device can turn this off in Settings.
 function onVisibilityChange() {
-  if (isAndroid && document.visibilityState === 'hidden' && !store.locked) {
+  if (
+    isAndroid &&
+    store.lockOnAppSwitch &&
+    document.visibilityState === 'hidden' &&
+    !store.locked
+  ) {
     void store.lockAll()
   }
 }
@@ -378,6 +393,9 @@ onBeforeUnmount(() => {
           <Save :size="14" />
           {{ store.saving ? 'Saving…' : 'Save' }}
         </button>
+        <button class="icon-btn" title="Settings" @click="store.settingsOpen = true">
+          <Settings :size="16" />
+        </button>
         <button class="icon-btn" title="Lock all vaults" @click="lockAll">
           <Lock :size="16" />
         </button>
@@ -400,6 +418,7 @@ onBeforeUnmount(() => {
 
   <SearchPalette />
   <HelpOverlay />
+  <SettingsModal />
   <PromptModal
     :open="!!prompt"
     :title="prompt?.mode === 'rename' ? 'Rename group' : 'New group'"
